@@ -1,40 +1,60 @@
 import chalk from 'chalk'
 import fs from 'fs'
-import path from 'path'
-import { pathToFileURL } from 'url'
-import yaml from 'yaml'
+
+import loadBuildinPlugins from './plugins.js'
 
 class Vivia {
-  fetchers: Record<string, any> = {}
-  renderers: Record<string, any> = {}
-  presenters: Record<string, any> = {}
-  argv: string[]
-  config: object
-  context: any
-  constructor (argv: string[]) {
-    this.argv = argv
+  plugin: Record<string, Record<string, Function>> = {}
+  config: any
 
-    // load config
-    this.config = fs.existsSync('vivia.yml')
-      ? yaml.parse(fs.readFileSync('vivia.yml', 'utf8'))
-      : fs.existsSync('vivia.yaml')
-      ? yaml.parse(fs.readFileSync('vivia.yaml', 'utf8'))
-      : fs.existsSync('vivia.json')
-      ? JSON.parse(fs.readFileSync('vivia.json', 'utf8'))
-      : {}
+  constructor (config: object) {
+    this.config = config
   }
+
   async load () {
-    const deps = Object.keys(
-      JSON.parse(fs.readFileSync('package.json', 'utf8')).dependencies
-    ).filter((dep: string) => dep.startsWith('vivia-'))
-    for (const dep of deps) {
+    this.plugin = loadBuildinPlugins(this.config)
+
+    await Promise.all(
+      Object.keys(
+        JSON.parse(fs.readFileSync('package.json', 'utf8')).dependencies
+      )
+        .filter((dep: string) => dep.startsWith('vivia-'))
+        .map(async (dep: string) => {
+          const type = dep.split('-')[1]
+          const name = dep.split('-').slice(2).join('-')
+          try {
+            if (!Object.keys(this.plugin).includes(type)) {
+              throw new Error(`Plugin type '${type}' is not supported`)
+            }
+
+            const func = (await import('../../' + dep + '/index.js')).default
+
+            if (typeof func !== 'function') {
+              throw new Error('Plugin is expected to export a function')
+            }
+
+            this.plugin[type][name] = func
+            console.log(chalk.green(`Loaded ${dep}`))
+          } catch (e) {
+            console.error(chalk.red(`Failed to load ${dep}:`))
+            console.error(e)
+          }
+        })
+    )
+  }
+
+  async render (context: any) {
+    let pipeline = this.config.render[context.type]
+    if (!(pipeline instanceof Array)) pipeline = [pipeline]
+
+    pipeline.forEach((name: string) => {
       try {
-        await import('../../' + dep + '/index.js')
-        console.log(chalk.green(`Loaded ${dep}`))
+        console.log('you see pipeline done: ' + this.plugin.renderer[name])
+        this.plugin.renderer[name](context)
       } catch (e) {
-        console.error(chalk.red(`Failed to load ${dep}`))
+        console.log(e)
       }
-    }
+    })
   }
 }
 
