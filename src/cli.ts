@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 
-import fs from 'fs'
-import yaml from 'yaml'
 import express from 'express'
-
-import Vivia from './vivia.js'
 import chalk from 'chalk'
 
-const vivia = new Vivia(yaml.parse(fs.readFileSync('vivia.yml', 'utf8')))
-await vivia.load()
+import Vivia from './vivia.js'
+import { readFile, readYAML } from './utils.js'
 
-console.log(vivia)
+const vivia = new Vivia(readYAML('vivia.yml'))
+await vivia.load()
 
 switch (process.argv[2]) {
   case 'watch':
@@ -26,13 +23,13 @@ function watch () {
   const app = express()
   app.get('*', async (req, res) => {
     const path = req.path.endsWith('/') ? req.path + 'index.md' : req.path
-    console.log(`GET ${path}`)
 
     try {
       let context: any = {
+        path,
         type: 'md',
         config: vivia.config,
-        content: fs.readFileSync(`content${path}`, 'utf8')
+        content: readFile(`content${path}`)
       }
       await vivia.render(context)
 
