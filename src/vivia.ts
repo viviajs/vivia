@@ -1,11 +1,14 @@
 import chalk from 'chalk'
 import path from 'path'
 
-import { readJSON } from './utils.js'
+import { readDir, readJSON } from './utils.js'
 
 class Vivia {
   plugin: Record<string, Record<string, Function>> = { renderer: {} }
   config: any
+  data: any
+  content: any
+  template: any
 
   constructor (config: object) {
     this.config = config
@@ -23,20 +26,18 @@ class Vivia {
           const name = dep.split('-').slice(2).join('-')
 
           try {
+            let pluginConfig
+            try {
+              pluginConfig = this.config.plugins[type][name] ?? {}
+            } catch {
+              pluginConfig = {}
+            }
             this.plugin[type][name] = (
               await import(
                 'file://' +
                   path.join(process.cwd(), 'node_modules', dep, 'index.js')
               )
-            ).default(
-              (() => {
-                try {
-                  return this.config.plugins[type][name] ?? {}
-                } catch {
-                  return {}
-                }
-              })()
-            )
+            ).default(pluginConfig)
 
             console.log(chalk.green(`Loaded ${dep}`))
           } catch (e) {
@@ -45,6 +46,10 @@ class Vivia {
           }
         })
     )
+
+    this.data = readDir('data')
+    this.content = readDir('content')
+    this.template = readDir('template')
   }
 
   async render (ctx: any) {
