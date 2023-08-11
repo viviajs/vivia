@@ -2,13 +2,14 @@ import chalk from 'chalk'
 import path from 'path'
 
 import { readDir, readJSON, readYAML } from './utils.js'
+import { pathToFileURL } from 'url'
 
 class Vivia {
   plugins: Record<string, Function> = {}
   config: any
-  data: any
-  content: any
-  template: any
+  data: Record<string, string> = {}
+  content: Record<string, string> = {}
+  template: Record<string, string> = {}
 
   async load () {
     this.config = readYAML('vivia.yml')
@@ -28,10 +29,12 @@ class Vivia {
               } catch {
                 pluginConfig = {}
               }
+
               this.plugins[name] = (
                 await import(
-                  'file://' +
+                  pathToFileURL(
                     path.join(process.cwd(), 'node_modules', dep, 'index.js')
+                  ).href
                 )
               ).default(pluginConfig)
 
@@ -44,73 +47,29 @@ class Vivia {
       )
     }
 
-    try {
-      this.data = readDir('data')
-    } catch {
-      this.data = {}
-    }
-    try {
-      this.content = readDir('content')
-    } catch {
-      this.content = {}
-    }
-    try {
-      this.template = readDir('template')
-    } catch {
-      this.template = {}
-    }
+    this.data = readDir('data')
+    this.content = readDir('content')
+    this.template = readDir('template')
   }
 
-  async render (path: string) {
-    let context: any = {
-      path: path,
-      type: 'md',
-      config: this.config,
-      data: this.data,
-      template: (() => {
-        // template matching rule:
-        // 1. find template matching the path
-        // 2. find default template in the same directory
-        // 3. turn to parent directory and repeat 1 and 2
+  async render (context: any) {
+    let pipeline: string[] = this.config.pipeline[context.type]
+    if (!(pipeline instanceof Array)) pipeline = [pipeline]
 
-        let t = this.template
-        let d
-
-        // /a/b/c.md
-        // this will slice the first slash and the last .md
-        for (const p of filepath.slice(0, -3).slice(1).split('/')) {
-          try {
-            d = t[Object.keys(t).find(t => t.startsWith('default')) as string]
-          } catch {}
-          try {
-            t = t[Object.keys(t).find(t => t.startsWith(p)) as string]
-            if (t == null) throw new Error()
-          } catch {
-            if (d == null) console.error(`no template matched ${req.path}`)
-            return d ?? ''
-          }
-        }
-        if (t == null) console.error(`no template matched ${req.path}`)
-        return t ?? ''
-      })(),
-      content: readFile(`content${filepath}`)
-    }
-
-    let renderers = this.config.render[context.type]
-    if (!(renderers instanceof Array)) renderers = [renderers]
-
-    renderers.forEach((name: string) => {
+    for (const name of pipeline) {
       try {
         if (this.plugins[name] == undefined)
-          throw new Error('Plugin not installed or loaded')
-        this.plugins[name](context)
+          throw new Error(`Plugin 'vivia-${name}' not installed or loaded`)
+        await this.plugins[name](context)
       } catch (e) {
         console.error(
-          chalk.red(`Failed to render ${context.path} at vivia-${name}:`)
+          chalk.red(`Failed to render ${context.path} at 'vivia-${name}':`)
         )
         console.error(e)
       }
-    })
+    }
+
+    return context
   }
 }
 
