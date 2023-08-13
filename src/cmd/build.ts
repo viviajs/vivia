@@ -6,12 +6,7 @@ import Vivia from '../vivia.js'
 const vivia = new Vivia()
 await vivia.load()
 
-Object.entries(vivia.content).forEach(async ([href, text]) => {
-  const context = await vivia.render({
-    type: 'md',
-    path: href,
-    content: text,
-    template: '{{@ content }}'
-  })
-  writeFile(path.resolve('public', href), context.content)
+Object.keys(vivia.content).forEach(async pathname => {
+  const context = await vivia.render(pathname)
+  writeFile(path.resolve('public', pathname.slice(1)), context.content)
 })

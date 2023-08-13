@@ -7,12 +7,25 @@ import { pathToFileURL } from 'url'
 class Vivia {
   plugins: Record<string, Function> = {}
   config: any
-  data: Record<string, string> = {}
-  content: Record<string, string> = {}
-  template: Record<string, string> = {}
+  data: Record<string, Buffer> = {}
+  content: Record<string, Buffer> = {}
+  template: Record<string, Buffer> = {}
 
   async load () {
-    this.config = readYAML('vivia.yml')
+    try {
+      this.config = {
+        port: 3722,
+        plugins: {},
+        ...readYAML('vivia.yml')
+      }
+    } catch {
+      console.error(
+        chalk.red(
+          `'vivia.yml' not found. Run the command in a Vivia project folder or create a new one with 'vivia init'`
+        )
+      )
+      process.exit(1)
+    }
 
     const deps = readJSON('package.json').dependencies
     if (deps != undefined) {
@@ -47,13 +60,27 @@ class Vivia {
       )
     }
 
-    this.data = readDir('data')
-    this.content = readDir('content')
-    this.template = readDir('template')
+    try {
+      this.data = readDir('data')
+    } catch {}
+    try {
+      this.content = readDir('content')
+    } catch {}
+    try {
+      this.template = readDir('template')
+    } catch {}
   }
 
-  async render (context: any) {
+  async render (pathname: string) {
+    const context = {
+      type: path.extname(pathname).slice(1),
+      path: pathname.replace('index.md', ''),
+      content: this.content[pathname],
+      template: '{{@ content }}'
+    }
+
     let pipeline: string[] = this.config.pipeline[context.type]
+    if (pipeline == undefined) pipeline = []
     if (!(pipeline instanceof Array)) pipeline = [pipeline]
 
     for (const name of pipeline) {
