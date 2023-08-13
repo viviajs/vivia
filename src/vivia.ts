@@ -7,9 +7,9 @@ import { pathToFileURL } from 'url'
 class Vivia {
   plugins: Record<string, Function> = {}
   config: any
-  data: Record<string, Buffer> = {}
-  content: Record<string, Buffer> = {}
-  template: Record<string, Buffer> = {}
+  data: Record<string, any> = {}
+  content: Record<string, any> = {}
+  template: Record<string, any> = {}
 
   async load () {
     try {

@@ -38,8 +38,8 @@ export function readDir (...paths: string[]) {
   return dir
 }
 
-export function writeFile (file: string, text: string) {
+export function writeFile (file: string, data: any) {
   const folder = path.dirname(file)
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
-  fs.writeFileSync(file, text)
+  fs.writeFileSync(file, data)
 }
