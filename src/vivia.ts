@@ -11,64 +11,57 @@ class Vivia {
   content: Record<string, any> = {}
   template: Record<string, any> = {}
 
-  async load () {
+  defaultConfig = {
+    port: 3722,
+    plugins: {}
+  }
+
+  async loadConfig () {
     try {
-      this.config = {
-        port: 3722,
-        plugins: {},
-        ...readYAML('vivia.yml')
-      }
+      this.config = { ...this.defaultConfig, ...readYAML('vivia.yml') }
     } catch {
-      console.error(
-        chalk.red(
-          `'vivia.yml' not found. Run the command in a Vivia project folder or create a new one with 'vivia init'`
-        )
-      )
+      console.error(chalk.red(`Not a vivia project folder`))
       process.exit(1)
     }
+  }
 
-    const deps = readJSON('package.json').dependencies
-    if (deps != undefined) {
-      await Promise.all(
-        Object.keys(deps)
-          .filter((dep: string) => dep.startsWith('vivia-'))
-          .map(async (dep: string) => {
-            const name = dep.split('-').slice(1).join('-')
+  async loadPlugins () {
+    const load = async (pluginName: string) => {
+      try {
+        const pluginConfig = this.config.plugins[pluginName] ?? {}
+        const modulePath = pathToFileURL(
+          path.join(process.cwd(), 'node_modules', pluginName, 'index.js')
+        ).href
+        const module = await import(modulePath)
+        let plugins = module.default(pluginConfig)
+        if (plugins instanceof Function)
+          plugins = { [pluginName.replace('vivia-', '')]: plugins }
+        this.plugins = { ...this.plugins, ...plugins }
 
-            try {
-              let pluginConfig
-              try {
-                pluginConfig = this.config.plugins[name] ?? {}
-              } catch {
-                pluginConfig = {}
-              }
-
-              this.plugins[name] = (
-                await import(
-                  pathToFileURL(
-                    path.join(process.cwd(), 'node_modules', dep, 'index.js')
-                  ).href
-                )
-              ).default(pluginConfig)
-
-              console.log(chalk.green(`Loaded ${dep}`))
-            } catch (e) {
-              console.error(chalk.red(`Failed to load ${dep}:`))
-              console.error(e)
-            }
-          })
-      )
+        console.log(chalk.green(`Loaded ${pluginName}`))
+      } catch (e) {
+        console.error(chalk.red(`Failed to load ${pluginName}:`))
+        console.error(e)
+      }
     }
 
-    try {
-      this.data = readDir('data')
-    } catch {}
-    try {
-      this.content = readDir('content')
-    } catch {}
-    try {
-      this.template = readDir('template')
-    } catch {}
+    const deps: Record<string, string> =
+      readJSON('package.json').dependencies ?? {}
+
+    const functions = Object.keys(deps)
+      .filter(dep => dep.startsWith('vivia-'))
+      .map(load)
+
+    await Promise.all(functions)
+  }
+
+  async load () {
+    await this.loadConfig()
+    await this.loadPlugins()
+
+    this.data = readDir('data')
+    this.content = readDir('content')
+    this.template = readDir('template')
   }
 
   async render (pathname: string) {

@@ -34,7 +34,9 @@ export function readDir (...paths: string[]) {
     }
   }
 
-  read(...paths)
+  try {
+    read(...paths)
+  } catch {}
   return dir
 }
 
