@@ -7,7 +7,7 @@ const help = {
   'vivia help': 'Print this help message'
 }
 
-console.log(
+console.info(
   'Usage: vivia <commend>\n' +
     Object.entries(help)
       .map(([cmd, desc]) => `  ${chalk.cyan(cmd)}\t\t${desc}`)
