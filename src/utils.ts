@@ -1,6 +1,5 @@
 import fs from 'fs'
 import path from 'path'
-import { pathToFileURL } from 'url'
 import yaml from 'yaml'
 
 export function readFile (...paths: string[]) {
@@ -17,15 +16,14 @@ export function readYAML (...paths: string[]) {
 
 export function readDir (...paths: string[]) {
   const dir: Record<string, Buffer> = {}
-  const prefix = pathToFileURL(path.resolve(...paths)).pathname + '/'
+  const prefix = path.posix.join(...paths) + '/'
 
   const read = (...paths: string[]) => {
     for (const filename of fs.readdirSync(path.join(...paths))) {
       const stat = fs.statSync(path.join(...paths, filename))
       if (stat.isFile()) {
-        const pathname = pathToFileURL(
-          path.resolve(...paths, filename)
-        ).pathname.replace(prefix, '')
+        const pathname = path.posix.join(...paths, filename).replace(prefix, '')
+
         dir[pathname] = readFile(...paths, filename)
       }
       if (stat.isDirectory()) read(...paths, filename)

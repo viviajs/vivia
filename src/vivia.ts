@@ -9,13 +9,14 @@ class Vivia {
   config: any = {
     port: 3722,
     plugins: {},
+    pipeline: {},
     outdir: 'public'
   }
   data: Record<string, any> = {}
   content: Record<string, any> = {}
   template: Record<string, any> = {}
 
-  constructor () {
+  async loadConfig () {
     try {
       this.config = { ...this.config, ...readYAML('vivia.yml') }
     } catch {
@@ -47,14 +48,15 @@ class Vivia {
     const deps: Record<string, string> =
       readJSON('package.json').dependencies ?? {}
 
-    const functions = Object.keys(deps)
+    const asyncs = Object.keys(deps)
       .filter(dep => dep.startsWith('vivia-'))
       .map(load)
 
-    await Promise.all(functions)
+    await Promise.all(asyncs)
   }
 
   async load () {
+    await this.loadConfig()
     await this.loadPlugins()
 
     this.data = readDir('data')
@@ -64,13 +66,15 @@ class Vivia {
 
   async render (pathname: string) {
     const context = {
-      type: path.extname(pathname).slice(1),
-      path: pathname.replace('index.md', ''),
+      path: pathname,
+      get link () {
+        return '/' + this.path.replace('index.html', '')
+      },
       content: this.content[pathname],
       template: '{{@ content }}'
     }
 
-    let pipeline: string[] = this.config.pipeline[context.type]
+    let pipeline: string[] = this.config.pipeline[path.extname(context.path)]
     if (pipeline == undefined) pipeline = []
     if (!(pipeline instanceof Array)) pipeline = [pipeline]
 
@@ -91,7 +95,8 @@ class Vivia {
 
   async build (pathname: string) {
     const context = await this.render(pathname)
-    writeFile(path.resolve(this.config.outdir, pathname), context.content)
+    writeFile(path.resolve(this.config.outdir, context.path), context.content)
+    return context
   }
 
   async buildAll () {
@@ -100,7 +105,7 @@ class Vivia {
 
   async rebuild (pathname: string) {
     this.content[pathname] = readFile('content', pathname)
-    await this.build(pathname)
+    return await this.build(pathname)
   }
 
   async rebuildAll () {
