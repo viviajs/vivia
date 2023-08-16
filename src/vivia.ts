@@ -96,7 +96,6 @@ class Vivia {
   async build (pathname: string) {
     const context = await this.render(pathname)
     writeFile(path.resolve(this.config.outdir, context.path), context.content)
-    return context
   }
 
   async buildAll () {
@@ -105,7 +104,7 @@ class Vivia {
 
   async rebuild (pathname: string) {
     this.content[pathname] = readFile('content', pathname)
-    return await this.build(pathname)
+    await this.build(pathname)
   }
 
   async rebuildAll () {

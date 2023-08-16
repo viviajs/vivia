@@ -23,7 +23,6 @@ export function readDir (...paths: string[]) {
       const stat = fs.statSync(path.join(...paths, filename))
       if (stat.isFile()) {
         const pathname = path.posix.join(...paths, filename).replace(prefix, '')
-
         dir[pathname] = readFile(...paths, filename)
       }
       if (stat.isDirectory()) read(...paths, filename)
