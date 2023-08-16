@@ -1,3 +1,6 @@
 import fs from 'fs'
 
-fs.rmSync('public', { recursive: true, force: true })
+import Vivia from '../vivia.js'
+
+const vivia = new Vivia()
+fs.rmSync(vivia.config.outdir, { recursive: true, force: true })

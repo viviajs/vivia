@@ -1,24 +1,23 @@
 import chalk from 'chalk'
 import path from 'path'
 
-import { readDir, readJSON, readYAML } from './utils.js'
+import { readDir, readFile, readJSON, readYAML, writeFile } from './utils.js'
 import { pathToFileURL } from 'url'
 
 class Vivia {
   plugins: Record<string, Function> = {}
-  config: any
+  config: any = {
+    port: 3722,
+    plugins: {},
+    outdir: 'public'
+  }
   data: Record<string, any> = {}
   content: Record<string, any> = {}
   template: Record<string, any> = {}
 
-  defaultConfig = {
-    port: 3722,
-    plugins: {}
-  }
-
-  async loadConfig () {
+  constructor () {
     try {
-      this.config = { ...this.defaultConfig, ...readYAML('vivia.yml') }
+      this.config = { ...this.config, ...readYAML('vivia.yml') }
     } catch {
       console.error(chalk.red(`Not a vivia project folder`))
       process.exit(1)
@@ -56,7 +55,6 @@ class Vivia {
   }
 
   async load () {
-    await this.loadConfig()
     await this.loadPlugins()
 
     this.data = readDir('data')
@@ -88,8 +86,26 @@ class Vivia {
         console.error(e)
       }
     }
-
     return context
+  }
+
+  async build (pathname: string) {
+    const context = await this.render(pathname)
+    writeFile(path.resolve(this.config.outdir, pathname), context.content)
+  }
+
+  async buildAll () {
+    await Promise.all(Object.keys(this.content).map(this.build.bind(this)))
+  }
+
+  async rebuild (pathname: string) {
+    this.content[pathname] = readFile('content', pathname)
+    await this.build(pathname)
+  }
+
+  async rebuildAll () {
+    this.content = readDir('content')
+    await this.buildAll()
   }
 }
 

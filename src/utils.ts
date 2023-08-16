@@ -17,20 +17,18 @@ export function readYAML (...paths: string[]) {
 
 export function readDir (...paths: string[]) {
   const dir: Record<string, Buffer> = {}
-  const prefix = pathToFileURL(path.resolve(...paths)).pathname
+  const prefix = pathToFileURL(path.resolve(...paths)).pathname + '/'
 
   const read = (...paths: string[]) => {
-    for (const file of fs.readdirSync(path.join(...paths))) {
-      const stat = fs.statSync(path.join(...paths, file))
+    for (const filename of fs.readdirSync(path.join(...paths))) {
+      const stat = fs.statSync(path.join(...paths, filename))
       if (stat.isFile()) {
-        dir[
-          pathToFileURL(path.resolve(...paths, file)).pathname.replace(
-            prefix,
-            ''
-          )
-        ] = readFile(...paths, file)
+        const pathname = pathToFileURL(
+          path.resolve(...paths, filename)
+        ).pathname.replace(prefix, '')
+        dir[pathname] = readFile(...paths, filename)
       }
-      if (stat.isDirectory()) read(...paths, file)
+      if (stat.isDirectory()) read(...paths, filename)
     }
   }
 
@@ -40,8 +38,8 @@ export function readDir (...paths: string[]) {
   return dir
 }
 
-export function writeFile (file: string, data: any) {
-  const folder = path.dirname(file)
+export function writeFile (filename: string, data: any) {
+  const folder = path.dirname(filename)
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
-  fs.writeFileSync(file, data)
+  fs.writeFileSync(filename, data)
 }
