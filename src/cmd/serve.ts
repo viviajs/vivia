@@ -21,7 +21,7 @@ await vivia.load()
 function hotreloadInject () {
   vivia.plugins['hotreload'] = (context: any) => {
     if (path.extname(context.path) == '.html') {
-      context.body += hotreloadScript
+      context.content += hotreloadScript
     }
   }
   Object.keys(vivia.config.render).forEach(key => {
@@ -46,10 +46,10 @@ fs.watch('.', { recursive: true }, async (event, pathname) => {
   if (pathname.startsWith(vivia.config.outdir)) return
   pathname = path.posix.join(...pathname.split('\\'))
   switch (pathname.split('/')[0]) {
-    case 'content':
+    case 'source':
       console.clear()
       console.info(`Detected change on ${pathname}, rebuilding...`)
-      await vivia.rebuild(pathname.replace('content/', ''))
+      await vivia.rebuild(pathname.replace('source/', ''))
       break
     case 'data':
     case 'template':

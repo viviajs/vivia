@@ -10,7 +10,7 @@ class Vivia {
   plugins: Record<string, Function> = {}
   config: any = {}
   data: Record<string, any> = {}
-  content: Record<string, any> = {}
+  source: Record<string, any> = {}
   template: Record<string, any> = {}
 
   async loadConfig () {
@@ -61,8 +61,8 @@ class Vivia {
     await Promise.all(asyncs)
   }
 
-  async loadContent () {
-    this.content = {}
+  async loadSource () {
+    this.source = {}
     const read = async (...paths: string[]) => {
       // try {
       for (const filename of fs.readdirSync(path.join(...paths))) {
@@ -70,20 +70,20 @@ class Vivia {
         if (stat.isFile()) {
           const pathname = path.posix
             .join(...paths, filename)
-            .replace('content/', '')
+            .replace('source/', '')
 
           const context = await this.prerender(
             pathname,
             readFile(...paths, filename)
           )
 
-          this.content[pathname] = context
+          this.source[pathname] = context
         }
         if (stat.isDirectory()) await read(...paths, filename)
       }
       // } catch {}
     }
-    await read('content')
+    await read('source')
   }
 
   async loadData () {
@@ -131,7 +131,7 @@ class Vivia {
   async load () {
     await this.loadConfig()
     await this.loadPlugins()
-    await this.loadContent()
+    await this.loadSource()
     await this.loadData()
     await this.loadTemplate()
   }
@@ -139,7 +139,7 @@ class Vivia {
   async prerender (pathname: string, content: Buffer) {
     const root = this.config.root
     const context = {
-      body: content,
+      content,
       path: pathname,
       get link () {
         return path.join(root, this.path)
@@ -192,8 +192,8 @@ class Vivia {
       return this.template['default'] ?? ''
     }
 
-    const context = this.content[pathname]
-    context.content = this.content
+    const context = this.source[pathname]
+    context.source = this.source
     context.data = this.data
     context.template = findtemp()
 
@@ -222,25 +222,22 @@ class Vivia {
 
   async build (pathname: string) {
     const context = await this.render(pathname)
-    writeFile(path.resolve(this.config.outdir, context.path), context.body)
+    writeFile(path.resolve(this.config.outdir, context.path), context.content)
   }
 
   async buildAll () {
     fs.rmSync(this.config.outdir, { recursive: true, force: true })
-    await Promise.all(Object.keys(this.content).map(this.build.bind(this)))
+    await Promise.all(Object.keys(this.source).map(this.build.bind(this)))
   }
 
   async rebuild (pathname: string) {
-    const context = await this.prerender(
-      pathname,
-      readFile('content', pathname)
-    )
-    this.content[context.path] = context
+    const context = await this.prerender(pathname, readFile('source', pathname))
+    this.source[context.path] = context
     await this.build(pathname)
   }
 
   async rebuildAll () {
-    await this.loadContent()
+    await this.loadSource()
     await this.loadData()
     await this.loadTemplate()
     await this.buildAll()
