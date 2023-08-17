@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import path from 'path'
 import fs from 'fs'
+import { minimatch } from 'minimatch'
 
 import { readFile, readJSON, readYAML, writeFile } from './utils.js'
 import { pathToFileURL } from 'url'
@@ -18,6 +19,7 @@ class Vivia {
         port: 3722,
         plugins: {},
         pipeline: {},
+        root: '/',
         outdir: 'public',
         ...readYAML('vivia.yml')
       }
@@ -151,16 +153,22 @@ class Vivia {
     }
 
     const context = {
+      config: this.config,
+      content: this.content[pathname],
+      data: this.data,
+      template: findtemp(),
       path: pathname,
       get link () {
-        return '/' + this.path.replace('index.html', '')
-      },
-      content: this.content[pathname],
-      template: findtemp()
+        return path.join(this.config.root, this.path)
+      }
     }
 
-    let pipeline: string[] = this.config.pipeline[path.extname(context.path)]
-    if (pipeline == undefined) pipeline = []
+    let key = Object.keys(this.config.pipeline).find(pipe =>
+      minimatch(pathname, pipe)
+    )
+    if (key == undefined) return context
+    let pipeline = this.config.pipeline[key]
+    if (pipeline == undefined) return context
     if (!(pipeline instanceof Array)) pipeline = [pipeline]
 
     for (const name of pipeline) {
