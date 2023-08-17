@@ -31,21 +31,21 @@ class Vivia {
 
   async loadPlugins () {
     this.plugins = {}
-    const load = async (pluginName: string) => {
+    const load = async (dep: string) => {
       try {
+        const pluginName = dep.replace('vivia-', '')
         const pluginConfig = this.config.plugins[pluginName] ?? {}
         const modulePath = pathToFileURL(
-          path.join(process.cwd(), 'node_modules', pluginName, 'index.js')
+          path.join(process.cwd(), 'node_modules', dep, 'index.js')
         ).href
         const module = await import(modulePath)
         let plugins = module.default(pluginConfig)
-        if (plugins instanceof Function)
-          plugins = { [pluginName.replace('vivia-', '')]: plugins }
+        if (plugins instanceof Function) plugins = { [pluginName]: plugins }
         this.plugins = { ...this.plugins, ...plugins }
 
-        console.info(chalk.green(`Loaded ${pluginName}`))
+        console.info(chalk.green(`Loaded ${dep}`))
       } catch (e) {
-        console.error(chalk.red(`Failed to load ${pluginName}:`))
+        console.error(chalk.red(`Failed to load ${dep}:`))
         console.error(e)
       }
     }
