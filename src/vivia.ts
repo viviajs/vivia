@@ -127,11 +127,6 @@ class Vivia {
     await this.loadTemplate()
   }
 
-  async reload () {
-    await this.loadConfig()
-    await this.loadPlugins()
-  }
-
   async render (pathname: string) {
     const findtemp = () => {
       // first, try to find the template that matches perfectly
@@ -189,6 +184,7 @@ class Vivia {
   }
 
   async buildAll () {
+    fs.rmSync(this.config.outdir, { recursive: true, force: true })
     await Promise.all(Object.keys(this.content).map(this.build.bind(this)))
   }
 

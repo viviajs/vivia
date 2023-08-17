@@ -59,9 +59,9 @@ fs.watch('.', { recursive: true }, async (event, pathname) => {
     case 'vivia.yml':
       console.clear()
       console.info(`Detected change on ${pathname}, restarting...`)
-      await vivia.reload()
+      await vivia.load()
       hotreloadInject()
-      await vivia.rebuildAll()
+      await vivia.buildAll()
       break
   }
   clients.forEach(client => client.send('reload'))
