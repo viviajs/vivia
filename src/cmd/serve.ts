@@ -48,21 +48,21 @@ fs.watch('.', { recursive: true }, async (event, pathname) => {
   switch (pathname.split('/')[0]) {
     case 'source':
       console.clear()
-      console.info(`Detected change on ${pathname}, rebuilding...`)
       await vivia.rebuild(pathname.replace('source/', ''))
+      console.info(chalk.yellow(`${pathname} changed, rebuilt`))
       break
     case 'data':
     case 'template':
       console.clear()
-      console.info(`Detected change on ${pathname}, rebuilding all...`)
       await vivia.rebuildAll()
+      console.info(chalk.yellow(`${pathname} changed, all rebuilt`))
       break
     case 'vivia.yml':
       console.clear()
-      console.info(`Detected change on ${pathname}, restarting...`)
       await vivia.load()
       hotreloadInject()
       await vivia.buildAll()
+      console.info(chalk.yellow(`${pathname} changed, restarted`))
       break
   }
   clients.forEach(client => client.send('reload'))

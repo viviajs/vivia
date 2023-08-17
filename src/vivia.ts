@@ -19,7 +19,7 @@ class Vivia {
         port: 3722,
         plugins: {},
         prerender: {},
-        prender: {},
+        render: {},
         root: '/',
         outdir: 'public',
         ...readYAML('vivia.yml')
@@ -142,7 +142,7 @@ class Vivia {
       content,
       path: pathname,
       get link () {
-        return path.join(root, this.path)
+        return path.posix.join(root, this.path)
       }
     }
 
@@ -228,6 +228,7 @@ class Vivia {
   async buildAll () {
     fs.rmSync(this.config.outdir, { recursive: true, force: true })
     await Promise.all(Object.keys(this.source).map(this.build.bind(this)))
+    console.log(chalk.cyan(`All successfully built`))
   }
 
   async rebuild (pathname: string) {
