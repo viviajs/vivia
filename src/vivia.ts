@@ -77,7 +77,7 @@ class Vivia {
             readFile(...paths, filename)
           )
 
-          this.content[context.path] = context.body
+          this.content[pathname] = context
         }
         if (stat.isDirectory()) await read(...paths, filename)
       }
@@ -136,37 +136,13 @@ class Vivia {
     await this.loadTemplate()
   }
 
-  findTemplate (pathname: string) {
-    // first, try to find the template that matches perfectly
-    const basepath = path.posix.join(
-      path.dirname(pathname),
-      path.basename(pathname, path.extname(pathname))
-    )
-
-    if (this.template.hasOwnProperty(basepath)) return this.template[basepath]
-
-    // if not, try to find the template that matches the directory most
-    let current = path.dirname(pathname)
-    while (current != '.') {
-      const temppath = path.posix.join(current, 'default')
-      if (this.template.hasOwnProperty(temppath)) {
-        return this.template[temppath]
-      }
-      // not matched, go to the parent directory
-      current = path.dirname(current)
-    }
-    return this.template['default'] ?? ''
-  }
-
-  async prerender (pathname: string, content: any) {
+  async prerender (pathname: string, content: Buffer) {
+    const root = this.config.root
     const context = {
-      config: this.config,
       body: content,
-      data: this.data,
-      template: this.findTemplate(pathname),
       path: pathname,
       get link () {
-        return path.join(this.config.root, this.path)
+        return path.join(root, this.path)
       }
     }
 
@@ -185,7 +161,7 @@ class Vivia {
         await this.plugins[name](context)
       } catch (e) {
         console.error(
-          chalk.red(`Failed to prerender ${context.path} at 'vivia-${name}':`)
+          chalk.red(`Failed to prerender '${context.path}' at 'vivia-${name}':`)
         )
         console.error(e)
       }
@@ -194,17 +170,32 @@ class Vivia {
   }
 
   async render (pathname: string) {
-    const context = {
-      config: this.config,
-      body: this.content[pathname],
-      content: this.content,
-      data: this.data,
-      template: this.findTemplate(pathname),
-      path: pathname,
-      get link () {
-        return path.join(this.config.root, this.path)
+    const findtemp = () => {
+      // first, try to find the template that matches perfectly
+      const basepath = path.posix.join(
+        path.dirname(pathname),
+        path.basename(pathname, path.extname(pathname))
+      )
+
+      if (this.template.hasOwnProperty(basepath)) return this.template[basepath]
+
+      // if not, try to find the template that matches the directory most
+      let current = path.dirname(pathname)
+      while (current != '.') {
+        const temppath = path.posix.join(current, 'default')
+        if (this.template.hasOwnProperty(temppath)) {
+          return this.template[temppath]
+        }
+        // not matched, go to the parent directory
+        current = path.dirname(current)
       }
+      return this.template['default'] ?? ''
     }
+
+    const context = this.content[pathname]
+    context.content = this.content
+    context.data = this.data
+    context.template = findtemp()
 
     let key = Object.keys(this.config.render).find(glob =>
       minimatch(pathname, glob)
@@ -221,7 +212,7 @@ class Vivia {
         await this.plugins[name](context)
       } catch (e) {
         console.error(
-          chalk.red(`Failed to render ${context.path} at 'vivia-${name}':`)
+          chalk.red(`Failed to render '${context.path}' at 'vivia-${name}':`)
         )
         console.error(e)
       }
@@ -240,7 +231,11 @@ class Vivia {
   }
 
   async rebuild (pathname: string) {
-    this.content[pathname] = readFile('content', pathname)
+    const context = await this.prerender(
+      pathname,
+      readFile('content', pathname)
+    )
+    this.content[context.path] = context
     await this.build(pathname)
   }
 

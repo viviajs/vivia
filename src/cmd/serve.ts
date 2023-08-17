@@ -21,11 +21,11 @@ await vivia.load()
 function hotreloadInject () {
   vivia.plugins['hotreload'] = (context: any) => {
     if (path.extname(context.path) == '.html') {
-      context.content += hotreloadScript
+      context.body += hotreloadScript
     }
   }
-  Object.keys(vivia.config.pipeline).forEach(key => {
-    vivia.config.pipeline[key].push('hotreload')
+  Object.keys(vivia.config.render).forEach(key => {
+    vivia.config.render[key].push('hotreload')
   })
 }
 
