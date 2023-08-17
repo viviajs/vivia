@@ -18,7 +18,8 @@ class Vivia {
       this.config = {
         port: 3722,
         plugins: {},
-        pipeline: {},
+        prerender: {},
+        prender: {},
         root: '/',
         outdir: 'public',
         ...readYAML('vivia.yml')
@@ -62,21 +63,27 @@ class Vivia {
 
   async loadContent () {
     this.content = {}
-    const read = (...paths: string[]) => {
-      try {
-        for (const filename of fs.readdirSync(path.join(...paths))) {
-          const stat = fs.statSync(path.join(...paths, filename))
-          if (stat.isFile()) {
-            const key = path.posix
-              .join(...paths, filename)
-              .replace('content/', '')
-            this.content[key] = readFile(...paths, filename)
-          }
-          if (stat.isDirectory()) read(...paths, filename)
+    const read = async (...paths: string[]) => {
+      // try {
+      for (const filename of fs.readdirSync(path.join(...paths))) {
+        const stat = fs.statSync(path.join(...paths, filename))
+        if (stat.isFile()) {
+          const pathname = path.posix
+            .join(...paths, filename)
+            .replace('content/', '')
+
+          const context = await this.prerender(
+            pathname,
+            readFile(...paths, filename)
+          )
+
+          this.content[context.path] = context.body
         }
-      } catch {}
+        if (stat.isDirectory()) await read(...paths, filename)
+      }
+      // } catch {}
     }
-    read('content')
+    await read('content')
   }
 
   async loadData () {
@@ -129,49 +136,85 @@ class Vivia {
     await this.loadTemplate()
   }
 
-  async render (pathname: string) {
-    const findtemp = () => {
-      // first, try to find the template that matches perfectly
-      const basepath = path.posix.join(
-        path.dirname(pathname),
-        path.basename(pathname, path.extname(pathname))
-      )
+  findTemplate (pathname: string) {
+    // first, try to find the template that matches perfectly
+    const basepath = path.posix.join(
+      path.dirname(pathname),
+      path.basename(pathname, path.extname(pathname))
+    )
 
-      if (this.template.hasOwnProperty(basepath)) return this.template[basepath]
+    if (this.template.hasOwnProperty(basepath)) return this.template[basepath]
 
-      // if not, try to find the template that matches the directory most
-      let current = path.dirname(pathname)
-      while (current != '.') {
-        const temppath = path.posix.join(current, 'default')
-        if (this.template.hasOwnProperty(temppath)) {
-          return this.template[temppath]
-        }
-        // not matched, go to the parent directory
-        current = path.dirname(current)
+    // if not, try to find the template that matches the directory most
+    let current = path.dirname(pathname)
+    while (current != '.') {
+      const temppath = path.posix.join(current, 'default')
+      if (this.template.hasOwnProperty(temppath)) {
+        return this.template[temppath]
       }
-      return this.template['default'] ?? ''
+      // not matched, go to the parent directory
+      current = path.dirname(current)
     }
+    return this.template['default'] ?? ''
+  }
 
+  async prerender (pathname: string, content: any) {
     const context = {
       config: this.config,
-      content: this.content[pathname],
+      body: content,
       data: this.data,
-      template: findtemp(),
+      template: this.findTemplate(pathname),
       path: pathname,
       get link () {
         return path.join(this.config.root, this.path)
       }
     }
 
-    let key = Object.keys(this.config.pipeline).find(pipe =>
-      minimatch(pathname, pipe)
+    let key = Object.keys(this.config.prerender).find(glob =>
+      minimatch(pathname, glob)
     )
     if (key == undefined) return context
-    let pipeline = this.config.pipeline[key]
-    if (pipeline == undefined) return context
-    if (!(pipeline instanceof Array)) pipeline = [pipeline]
+    let renderers = this.config.prerender[key]
+    if (renderers == undefined) return context
+    if (!(renderers instanceof Array)) renderers = [renderers]
 
-    for (const name of pipeline) {
+    for (const name of renderers) {
+      try {
+        if (this.plugins[name] == undefined)
+          throw new Error(`Plugin 'vivia-${name}' not installed or loaded`)
+        await this.plugins[name](context)
+      } catch (e) {
+        console.error(
+          chalk.red(`Failed to prerender ${context.path} at 'vivia-${name}':`)
+        )
+        console.error(e)
+      }
+    }
+    return context
+  }
+
+  async render (pathname: string) {
+    const context = {
+      config: this.config,
+      body: this.content[pathname],
+      content: this.content,
+      data: this.data,
+      template: this.findTemplate(pathname),
+      path: pathname,
+      get link () {
+        return path.join(this.config.root, this.path)
+      }
+    }
+
+    let key = Object.keys(this.config.render).find(glob =>
+      minimatch(pathname, glob)
+    )
+    if (key == undefined) return context
+    let renderers = this.config.render[key]
+    if (renderers == undefined) return context
+    if (!(renderers instanceof Array)) renderers = [renderers]
+
+    for (const name of renderers) {
       try {
         if (this.plugins[name] == undefined)
           throw new Error(`Plugin 'vivia-${name}' not installed or loaded`)
@@ -188,7 +231,7 @@ class Vivia {
 
   async build (pathname: string) {
     const context = await this.render(pathname)
-    writeFile(path.resolve(this.config.outdir, context.path), context.content)
+    writeFile(path.resolve(this.config.outdir, context.path), context.body)
   }
 
   async buildAll () {
