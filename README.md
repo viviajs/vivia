@@ -10,7 +10,7 @@ vivia is a simple and fast static website generator that gives you more freedom 
 
 ## Feature
 - Only encapsulate the basic components of the website (source, templates, data), simple and fast
-- Plugins pipeline, by defining `pipeline` in configuration, each plugin can control the final output, including operations such as adding watermarks to images
+- Plugins pipeline, by defining `render` and `prerender` pipeline in configuration, each plugin can control the final output, including operations such as adding watermarks to images
 - A more natural output, where the structure in `source` is the final website structure
 - Theme inheritance, no need to write complex configuration, just inherit the theme directly
 
