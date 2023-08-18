@@ -43,13 +43,21 @@ app.ws('*', (ws, req) => {
 
 fs.watch('.', { recursive: true }, async (event, pathname) => {
   if (pathname == undefined) return
-  if (pathname.startsWith(vivia.config.outdir)) return
   pathname = path.posix.join(...pathname.split('\\'))
   switch (pathname.split('/')[0]) {
+    case vivia.config.outdir:
+      return
     case 'source':
-      console.clear()
-      await vivia.rebuild(pathname.replace('source/', ''))
-      console.info(chalk.yellow(`${pathname} changed, rebuilt`))
+      if (fs.statSync(pathname).isDirectory()) {
+        console.clear()
+        await vivia.rebuildAll()
+        console.info(chalk.yellow(`${pathname} changed, all rebuilt`))
+      }
+      if (fs.statSync(pathname).isFile()) {
+        console.clear()
+        await vivia.rebuild(pathname.replace('source/', ''))
+        console.info(chalk.yellow(`${pathname} changed, rebuilt`))
+      }
       break
     case 'data':
     case 'template':

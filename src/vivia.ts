@@ -210,6 +210,7 @@ class Vivia {
         if (this.plugins[name] == undefined)
           throw new Error(`Plugin 'vivia-${name}' not installed or loaded`)
         await this.plugins[name](context)
+        console.log(pathname, name, context.content.slice(0,100))
       } catch (e) {
         console.error(
           chalk.red(`Failed to render '${context.path}' at 'vivia-${name}':`)
