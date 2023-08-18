@@ -93,13 +93,15 @@ class Vivia {
         if (fs.statSync(path.join('data', filename)).isFile()) {
           const key = path.basename(filename, path.extname(filename))
           switch (path.extname(filename)) {
-            case 'yml':
-            case 'yaml':
+            case '.yml':
+            case '.yaml':
               this.data[key] = readYAML('data', filename)
               break
-            case 'json':
+            case '.json':
               this.data[key] = readJSON('data', filename)
               break
+            case '.txt':
+              this.data[key] = readFile('data', filename).toString()
             default:
               this.data[key] = readFile('data', filename)
               break
@@ -210,7 +212,6 @@ class Vivia {
         if (this.plugins[name] == undefined)
           throw new Error(`Plugin 'vivia-${name}' not installed or loaded`)
         await this.plugins[name](context)
-        console.log(pathname, name, context.content.slice(0,100))
       } catch (e) {
         console.error(
           chalk.red(`Failed to render '${context.path}' at 'vivia-${name}':`)
@@ -229,12 +230,12 @@ class Vivia {
   async buildAll () {
     fs.rmSync(this.config.outdir, { recursive: true, force: true })
     await Promise.all(Object.keys(this.source).map(this.build.bind(this)))
-    console.log(chalk.cyan(`All successfully built`))
+    console.info(chalk.cyan(`All successfully built`))
   }
 
   async rebuild (pathname: string) {
     const context = await this.prerender(pathname, readFile('source', pathname))
-    this.source[context.path] = context
+    this.source[pathname] = context
     await this.build(pathname)
   }
 
