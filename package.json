@@ -1,8 +1,8 @@
 {
   "name": "vivia",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Simple and fast static website generator",
-  "author": "Saurlax <saurlax@qq.com>",
+  "author": "Saurlax",
   "license": "MIT",
   "keywords": [
     "cli",
@@ -15,7 +15,7 @@
   "homepage": "https://vivia.saurlax.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/saurlax/vivia.git"
+    "url": "git+https://github.com/saurlax/vivia.git"
   },
   "type": "module",
   "main": "dist/index.js",
