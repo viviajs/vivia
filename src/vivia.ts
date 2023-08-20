@@ -4,7 +4,6 @@ import fs from 'fs'
 import { minimatch } from 'minimatch'
 
 import { readFile, readJSON, readYAML, writeFile } from './utils.js'
-import { pathToFileURL } from 'url'
 
 class Vivia {
   plugins: Record<string, Function> = {}
@@ -15,6 +14,7 @@ class Vivia {
 
   async loadConfig () {
     try {
+      // default config
       this.config = {
         port: 3722,
         plugins: {},
@@ -36,17 +36,18 @@ class Vivia {
       try {
         const pluginName = dep.replace('vivia-', '')
         const pluginConfig = this.config.plugins[pluginName] ?? {}
-        const modulePath = pathToFileURL(
-          path.join(process.cwd(), 'node_modules', dep, 'index.js')
-        ).href
+        // import() starts from where 'dist/vivia.js' is
+        // very useful because you don't have to deal with the logic
+        // about returning to 'node_modules' when loading themes
+        const modulePath = path.posix.join('../..', dep, 'index.js')
         const module = await import(modulePath)
         let plugins = module.default(pluginConfig)
         if (plugins instanceof Function) plugins = { [pluginName]: plugins }
         this.plugins = { ...this.plugins, ...plugins }
 
-        console.info(chalk.green(`Loaded ${dep}`))
+        console.info(chalk.green(`Loaded '${dep}'`))
       } catch (e) {
-        console.error(chalk.red(`Failed to load ${dep}:`))
+        console.error(chalk.red(`Failed to load '${dep}':`))
         console.error(e)
       }
     }
@@ -55,7 +56,9 @@ class Vivia {
       readJSON('package.json').dependencies ?? {}
 
     const asyncs = Object.keys(deps)
-      .filter(dep => dep.startsWith('vivia-'))
+      .filter(
+        dep => dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
+      )
       .map(load)
 
     await Promise.all(asyncs)
@@ -130,18 +133,51 @@ class Vivia {
     read('template')
   }
 
+  async loadTheme () {
+    if (this.config.theme == undefined) return
+    if (!(this.config.theme instanceof Array))
+      this.config.theme = [this.config.theme]
+    for (const name of this.config.theme ?? []) {
+      try {
+        const cwd = process.cwd()
+
+        try {
+          process.chdir(path.join('node_modules', `vivia-theme-${name}`))
+        } catch {
+          throw new Error(`Theme 'vivia-theme-${name}' not installed`)
+        }
+
+        const theme = new Vivia()
+        await theme.load()
+        this.config = { ...theme.config, ...this.config }
+        this.plugins = { ...theme.plugins, ...this.plugins }
+        this.source = { ...theme.source, ...this.source }
+        this.data = { ...theme.data, ...this.data }
+        this.template = { ...theme.template, ...this.template }
+
+        process.chdir(cwd)
+        console.info(chalk.green(`Loaded theme 'vivia-theme-${name}'`))
+      } catch (e) {
+        console.error(chalk.red(`Failed to load theme 'vivia-theme-${name}':`))
+        console.error(e)
+      }
+    }
+  }
+
   async load () {
     await this.loadConfig()
     await this.loadPlugins()
     await this.loadSource()
     await this.loadData()
     await this.loadTemplate()
+    await this.loadTheme()
   }
 
   async prerender (pathname: string, content: Buffer) {
     const root = this.config.root
     const context = {
       content,
+      config: this.config,
       path: pathname,
       get link () {
         return path.posix.join(root, this.path)
@@ -243,6 +279,7 @@ class Vivia {
     await this.loadSource()
     await this.loadData()
     await this.loadTemplate()
+    await this.loadTheme()
     await this.buildAll()
   }
 }
