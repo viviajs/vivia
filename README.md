@@ -1,4 +1,4 @@
-<img src="logo.png" width="100" height="100" align="right" alt="logo" >
+<img src="logo.png" width="100" align="right" alt="logo">
 
 # Vivia
 
@@ -20,7 +20,7 @@ vivia is a simple and fast static website generator that gives you more freedom 
 
 ## Quick Start
 
-**Install Vivia**
+**Create project**
 
 ```bash
 $ npm create vivia
