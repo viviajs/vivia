@@ -24,7 +24,8 @@
     "prepublish": "tsc --build"
   },
   "files": [
-    "dist"
+    "dist",
+    "logo.png"
   ],
   "bin": {
     "vivia": "dist/cli.js"
