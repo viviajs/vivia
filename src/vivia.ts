@@ -35,7 +35,7 @@ class Vivia {
     const load = async (dep: string) => {
       try {
         const pluginName = dep.replace('vivia-', '')
-        const pluginConfig = { vivia: this, ...this.config.plugins[pluginName] }
+        const pluginConfig = this.config.plugins[pluginName] ?? {}
         // import() starts from where 'dist/vivia.js' is
         // very useful because you don't have to deal with the logic
         // about returning to 'node_modules' when loading themes
