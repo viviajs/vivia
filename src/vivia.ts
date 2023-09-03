@@ -273,6 +273,9 @@ class Vivia {
 
   async buildAll () {
     fs.rmSync(this.config.outdir, { recursive: true, force: true })
+    if (fs.existsSync('static')) {
+      fs.cpSync('static', this.config.outdir, { recursive: true, force: true })
+    }
     await Promise.all(Object.keys(this.source).map(this.build.bind(this)))
     console.info(chalk.cyan(`All successfully built`))
   }
