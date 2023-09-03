@@ -207,7 +207,7 @@ class Vivia {
         await this.plugins[name](context)
       } catch (e) {
         console.error(
-          chalk.red(`Failed to prerender '${context.path}' at 'vivia-${name}':`)
+          chalk.red(`Failed to prerender '${pathname}' at 'vivia-${name}':`)
         )
         console.error(e)
       }
@@ -258,7 +258,7 @@ class Vivia {
         await this.plugins[name](context)
       } catch (e) {
         console.error(
-          chalk.red(`Failed to render '${context.path}' at 'vivia-${name}':`)
+          chalk.red(`Failed to render '${pathname}' at 'vivia-${name}':`)
         )
         console.error(e)
       }
