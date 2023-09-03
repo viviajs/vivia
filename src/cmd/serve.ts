@@ -60,6 +60,7 @@ fs.watch('.', { recursive: true }, async (event, pathname) => {
       break
     case 'data':
     case 'template':
+    case 'static':
       console.clear()
       await vivia.rebuildAll()
       console.info(chalk.yellow(`${pathname} changed, all rebuilt`))
