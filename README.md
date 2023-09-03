@@ -27,7 +27,7 @@ $ npm create vivia
 $ npm i
 ```
 
-**Preview & Hot-reload Writing**
+**Preview & Hot-reload writing**
 
 ```bash
 $ npm run serve
