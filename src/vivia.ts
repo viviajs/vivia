@@ -35,10 +35,12 @@ class Vivia {
     const load = async (dep: string) => {
       try {
         const pluginName = dep.replace('vivia-', '')
-        const pluginConfig = this.config.plugins[pluginName] ?? {}
+        const pluginConfig = { vivia: this, ...this.config.plugins[pluginName] }
         // import() starts from where 'dist/vivia.js' is
         // very useful because you don't have to deal with the logic
         // about returning to 'node_modules' when loading themes
+
+        // FIXME: error if installed as a global package
         const modulePath = path.posix.join('../..', dep, 'index.js')
         const module = await import(modulePath)
         let plugins = module.default(pluginConfig)
@@ -86,12 +88,18 @@ class Vivia {
       }
       // } catch {}
     }
+    /* this is the only place in theory where error can cause
+     * so try-catch above is not needed
+     * throwing error if 'source' folder not exists
+     * to inform user is better than just ignoring it
+     */
     await read('source')
   }
 
   async loadData () {
     this.data = {}
     try {
+      // data file should only be placed in the 'data' root folder but not subfolders
       for (const filename of fs.readdirSync('data')) {
         if (fs.statSync(path.join('data', filename)).isFile()) {
           const key = path.basename(filename, path.extname(filename))
@@ -124,7 +132,7 @@ class Vivia {
             const key = path.posix
               .join(...paths, path.basename(filename, path.extname(filename)))
               .replace('template/', '')
-            this.template[key] = readFile(...paths, filename).toString()
+            this.template[key] = path.resolve(...paths, filename)
           }
           if (stat.isDirectory()) read(...paths, filename)
         }
@@ -167,9 +175,9 @@ class Vivia {
   async load () {
     await this.loadConfig()
     await this.loadPlugins()
-    await this.loadSource()
     await this.loadData()
     await this.loadTemplate()
+    await this.loadSource()
     await this.loadTheme()
   }
 
@@ -207,33 +215,33 @@ class Vivia {
     return context
   }
 
-  async render (pathname: string) {
-    const findtemp = () => {
-      // first, try to find the template that matches perfectly
-      const basepath = path.posix.join(
-        path.dirname(pathname),
-        path.basename(pathname, path.extname(pathname))
-      )
+  findTemplate (pathname: string) {
+    // first, try to find the template that matches perfectly
+    const basepath = path.posix.join(
+      path.dirname(pathname),
+      path.basename(pathname, path.extname(pathname))
+    )
 
-      if (this.template.hasOwnProperty(basepath)) return this.template[basepath]
+    if (this.template.hasOwnProperty(basepath)) return this.template[basepath]
 
-      // if not, try to find the template that matches the directory most
-      let current = path.dirname(pathname)
-      while (current != '.') {
-        const temppath = path.posix.join(current, 'default')
-        if (this.template.hasOwnProperty(temppath)) {
-          return this.template[temppath]
-        }
-        // not matched, go to the parent directory
-        current = path.dirname(current)
+    // if not, try to find the template that matches the directory most
+    let current = path.dirname(pathname)
+    while (current != '.') {
+      const temppath = path.posix.join(current, 'default')
+      if (this.template.hasOwnProperty(temppath)) {
+        return this.template[temppath]
       }
-      return this.template['default'] ?? ''
+      // not matched, go to the parent directory
+      current = path.dirname(current)
     }
+    return this.template['default']
+  }
 
+  async render (pathname: string) {
     const context = this.source[pathname]
     context.source = this.source
     context.data = this.data
-    context.template = findtemp()
+    context.template = this.findTemplate(pathname)
 
     let key = Object.keys(this.config.render).find(glob =>
       minimatch(pathname, glob)
@@ -276,9 +284,9 @@ class Vivia {
   }
 
   async rebuildAll () {
-    await this.loadSource()
     await this.loadData()
     await this.loadTemplate()
+    await this.loadSource()
     await this.loadTheme()
     await this.buildAll()
   }
