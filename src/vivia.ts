@@ -69,57 +69,59 @@ class Vivia {
   async loadSource () {
     this.source = {}
     const read = async (...paths: string[]) => {
-      // try {
-      for (const filename of fs.readdirSync(path.join(...paths))) {
-        const stat = fs.statSync(path.join(...paths, filename))
-        if (stat.isFile()) {
-          const pathname = path.posix
-            .join(...paths, filename)
-            .replace('source/', '')
+      try {
+        for (const filename of fs.readdirSync(path.join(...paths))) {
+          const stat = fs.statSync(path.join(...paths, filename))
+          if (stat.isFile()) {
+            const pathname = path.posix
+              .join(...paths, filename)
+              .replace('source/', '')
 
-          const context = await this.prerender(
-            pathname,
-            readFile(...paths, filename)
-          )
+            const context = await this.prerender(
+              pathname,
+              readFile(...paths, filename)
+            )
 
-          this.source[pathname] = context
+            this.source[pathname] = context
+          }
+          if (stat.isDirectory()) await read(...paths, filename)
         }
-        if (stat.isDirectory()) await read(...paths, filename)
-      }
-      // } catch {}
+      } catch {}
     }
-    /* this is the only place in theory where error can cause
-     * so try-catch above is not needed
-     * throwing error if 'source' folder not exists
-     * to inform user is better than just ignoring it
-     */
     await read('source')
   }
 
   async loadData () {
-    this.data = {}
-    try {
-      // data file should only be placed in the 'data' root folder but not subfolders
-      for (const filename of fs.readdirSync('data')) {
-        if (fs.statSync(path.join('data', filename)).isFile()) {
-          const key = path.basename(filename, path.extname(filename))
-          switch (path.extname(filename)) {
-            case '.yml':
-            case '.yaml':
-              this.data[key] = readYAML('data', filename)
-              break
-            case '.json':
-              this.data[key] = readJSON('data', filename)
-              break
-            case '.txt':
-              this.data[key] = readFile('data', filename).toString()
-            default:
-              this.data[key] = readFile('data', filename)
-              break
+    const read = (...paths: string[]) => {
+      let data: any = {}
+      try {
+        for (const filename of fs.readdirSync(path.join(...paths))) {
+          const stat = fs.statSync(path.join(...paths, filename))
+          if (stat.isFile()) {
+            const key = path.basename(filename, path.extname(filename))
+            switch (path.extname(filename)) {
+              case '.yml':
+              case '.yaml':
+                data[key] = readYAML(...paths, filename)
+                break
+              case '.json':
+                data[key] = readJSON(...paths, filename)
+                break
+              case '.txt':
+                data[key] = readFile(...paths, filename).toString()
+              default:
+                data[key] = readFile(...paths, filename)
+                break
+            }
+          }
+          if (stat.isDirectory()) {
+            data[filename] = read(...paths, filename)
           }
         }
-      }
-    } catch {}
+      } catch {}
+      return data
+    }
+    this.data = read('data')
   }
 
   async loadTemplate () {
