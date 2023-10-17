@@ -16,6 +16,8 @@ socket.onmessage = () => { location.reload() }
 </script>`
 
 const vivia = new Vivia()
+vivia.debug = true
+
 await vivia.load()
 
 function hotreloadInject () {

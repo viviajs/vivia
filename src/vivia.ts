@@ -6,6 +6,7 @@ import { minimatch } from 'minimatch'
 import { readFile, readJSON, readYAML, writeFile } from './utils.js'
 
 class Vivia {
+  debug = false
   plugins: Record<string, Function> = {}
   config: any = {}
   data: Record<string, any> = {}
@@ -36,6 +37,7 @@ class Vivia {
       try {
         const pluginName = dep.replace('vivia-', '')
         const pluginConfig = this.config.plugins[pluginName] ?? {}
+        pluginConfig.debug = this.debug
         // import() starts from where 'dist/vivia.js' is
         // very useful because you don't have to deal with the logic
         // about returning to 'node_modules' when loading themes
@@ -57,13 +59,13 @@ class Vivia {
     const deps: Record<string, string> =
       readJSON('package.json').dependencies ?? {}
 
-    const asyncs = Object.keys(deps)
+    const tasks = Object.keys(deps)
       .filter(
         dep => dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
       )
       .map(load)
 
-    await Promise.all(asyncs)
+    await Promise.all(tasks)
   }
 
   async loadSource () {
