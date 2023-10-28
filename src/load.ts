@@ -6,11 +6,8 @@ import { minimatch } from 'minimatch'
 import Vivia from './vivia.js'
 
 import { readFile, readJSON, readYAML, writeFile } from './utils.js'
-enum a {
-  b,
-  c,
-  d
-}
+
+
 function loadConfig (vivia: Vivia) {
   try {
     // default config

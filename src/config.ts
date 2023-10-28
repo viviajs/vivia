@@ -1,7 +1,4 @@
-import fs from 'fs'
-import path from 'path'
-import yaml from 'yaml'
-import toml from 'toml'
+import Utils, { basenameWithoutExt } from './utils.js'
 
 class Config {
   meta: {
@@ -25,25 +22,38 @@ class Config {
   }
   deploy: Record<string, any> = {}
 
-  static from (dir: string) {
-    fs.readdirSync(dir).forEach(filename => {
-
-    })
-
-    const content = fs.readFileSync(filename, 'utf8')
-    switch (path.extname(filename)) {
-      case '.yml':
-      case '.yaml':
-        return yaml.parse(content)
-      case '.json':
-        return JSON.parse(content)
-      case '.toml':
-        return toml.parse(content)
-      case '.js':
-        return
-      default:
-        throw new Error(`Unsupported config file: ${filename}`)
+  /**
+   * Load config from a vivia project directory.
+   * @param dirname The path to the directory.
+   * @returns The config of the project.
+   */
+  static from (dirname: string) {
+    const filenames = Utils.dir(dirname)
+    if (!filenames.some(filename => basenameWithoutExt(filename) === 'vivia')) {
+      throw new Error(`No vivia config file found in ${dirname}`)
     }
+
+    const config = new Config()
+    const duplicated: any = []
+    filenames.forEach(filename => {
+      const basename = basenameWithoutExt(filename)
+      if (!(basename === 'vivia' || basename in config)) {
+        return
+      }
+      if (duplicated.includes(basename)) {
+        console.warn(`Duplicate config file found: ${filename}`)
+      }
+      duplicated.push(basename)
+
+      const key = basename as keyof Config | 'vivia'
+      const content = Utils.parse(dirname, filename)
+      if (key === 'vivia') {
+        Object.assign(config, content)
+      } else {
+        Object.assign(config[key], content)
+      }
+    })
+    return config
   }
 }
 
