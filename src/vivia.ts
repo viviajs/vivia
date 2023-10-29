@@ -1,17 +1,19 @@
 import Config from './config.js'
 
 class Vivia {
-  config: Config
-  plugins: Record<string, Function> = {}
-  data: Record<string, any> = {}
-  source: Record<string, any> = {}
-  i18n: Record<string, any> = {}
+  private config: Config
+  private plugins: Record<string, Function> = {}
+  private data: Record<string, any> = {}
+  private source: Record<string, any> = {}
+  private i18n: Record<string, any> = {}
 
-  constructor (dir: string) {
-    this.config = new Config(dir)
+  constructor (dirname: string) {
+    this.config = Config.from(dirname)
   }
 
-  static parse () {}
+  register (name: string, func: (config: any) => Function) {
+    this.plugins[name] = func(this.config.plugins[name] ?? {})
+  }
 }
 
 export default Vivia
