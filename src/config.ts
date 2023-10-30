@@ -1,26 +1,19 @@
+import Logger from './logger.js'
 import Utils, { basenameWithoutExt } from './utils.js'
 
 class Config {
-  meta: {
-    [key: string]: any
-    title?: string
-    subtitle?: string
-    description?: string
-    keywords?: string[]
-    author?: string[]
-    language?: string
-    timezone?: string
-    icon?: string
-    url?: string
-  } = {}
+  site: Record<string, any> = {}
   plugins: Record<string, Function> = {}
   theme: Record<string, Function> = {}
-  render: Record<string, string[]> = {}
-  build: Record<string, any> = {
-    outdir: 'public',
-    debug: false
-  }
-  deploy: Record<string, any> = {}
+  pipeline: Record<string, any> = {}
+  // build: Record<string, any> = {
+  //   outdir: 'public'
+  // }
+  // serve: Record<string, any> = {
+  //   debug: true,
+  //   port: 3722
+  // }
+  // deploy: Record<string, any> = {}
 
   /**
    * Load config from a vivia project directory.
@@ -41,7 +34,7 @@ class Config {
         return
       }
       if (duplicated.includes(basename)) {
-        console.warn(`Duplicate config file found: ${filename}`)
+        Logger.warn(`Duplicate config file found: ${filename}`)
       }
       duplicated.push(basename)
 

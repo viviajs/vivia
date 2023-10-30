@@ -26,8 +26,8 @@ function hotreloadInject () {
       context.content += hotreloadScript
     }
   }
-  Object.keys(vivia.config.render).forEach(key => {
-    vivia.config.render[key].push('hotreload')
+  Object.keys(vivia.config.pipeline).forEach(key => {
+    vivia.config.pipeline[key].push('hotreload')
   })
 }
 

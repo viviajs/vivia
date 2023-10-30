@@ -26,12 +26,45 @@ class Utils {
   }
 
   /**
+   * Import a file or directory as a module.
+   * @param paths The path to the file or directory.
+   * @returns The module.
+   */
+  static async import (...paths: string[]) {
+    const filename = path.join(...paths)
+    const stat = fs.statSync(filename)
+    if (stat.isFile()) {
+      return await import(filename)
+    }
+    if (stat.isDirectory()) {
+      const index = Utils.parse(filename, 'package.json').main ?? 'index.js'
+      return await import(path.join(filename, index))
+    }
+  }
+  /**
    * Read a file and return a binary stream.
    * @param paths The path to the file.
    * @returns The binary stream.
    */
   static read (...paths: string[]) {
     return fs.readFileSync(path.join(...paths))
+  }
+
+  static readdir (...paths: string[]) {
+    // 递归读取文件夹
+    const result: string[] = []
+    const read = (...paths: string[]) => {
+      for (const filename of fs.readdirSync(path.join(...paths))) {
+        const stat = fs.statSync(path.join(...paths, filename))
+        if (stat.isFile()) {
+          result.push(path.join(...paths, filename))
+        }
+        if (stat.isDirectory()) {
+          read(...paths, filename)
+        }
+      }
+    }
+    return result
   }
 
   /**
