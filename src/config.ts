@@ -1,4 +1,4 @@
-import Logger from './logger.js'
+import chalk from 'chalk'
 import Utils, { basenameWithoutExt } from './utils.js'
 
 class Config {
@@ -34,7 +34,7 @@ class Config {
         return
       }
       if (duplicated.includes(basename)) {
-        Logger.warn(`Duplicate config file found: ${filename}`)
+        console.warn(chalk.yellow(`Duplicate config file found: ${filename}`))
       }
       duplicated.push(basename)
 

@@ -41,6 +41,7 @@ class Utils {
       return await import(path.join(filename, index))
     }
   }
+
   /**
    * Read a file and return a binary stream.
    * @param paths The path to the file.
@@ -50,21 +51,22 @@ class Utils {
     return fs.readFileSync(path.join(...paths))
   }
 
+  /**
+   * Read a directory and return a list of files and folders.
+   * @param paths The path to the directory.
+   * @returns The list of files and folders.
+   */
+  static dir (...paths: string[]) {
+    return fs.readdirSync(path.join(...paths))
+  }
+
+  /**
+   * Read a directory and return a list of files.
+   * @param paths The path to the directory.
+   * @returns The list of files.
+   */
   static readdir (...paths: string[]) {
-    // 递归读取文件夹
-    const result: string[] = []
-    const read = (...paths: string[]) => {
-      for (const filename of fs.readdirSync(path.join(...paths))) {
-        const stat = fs.statSync(path.join(...paths, filename))
-        if (stat.isFile()) {
-          result.push(path.join(...paths, filename))
-        }
-        if (stat.isDirectory()) {
-          read(...paths, filename)
-        }
-      }
-    }
-    return result
+    return fs.readdirSync(path.join(...paths), { recursive: true }) as string[]
   }
 
   /**
@@ -79,13 +81,11 @@ class Utils {
     fs.writeFileSync(filename, data)
   }
 
-  /**
-   * Read a directory and return a list of files and folders.
-   * @param paths The path to the directory.
-   * @returns The list of files and folders.
-   */
-  static dir (...paths: string[]) {
-    return fs.readdirSync(path.join(...paths))
+  static posix (...paths: string[]) {
+    return path
+      .join(...paths)
+      .split(path.sep)
+      .join(path.posix.sep)
   }
 }
 

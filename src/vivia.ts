@@ -7,6 +7,7 @@ class Vivia {
   workdir: string
   config: Config
   plugins: Record<string, Plugin> = {}
+  pipeline: Record<string, string[]> = {}
   globals: Record<string, any> = {}
   source: Map<string, any> = new Map()
 
@@ -16,6 +17,14 @@ class Vivia {
   }
 
   async load () {
+    // load source
+    Utils.readdir(this.workdir, 'source').forEach(filename => {
+      this.source.set(
+        Utils.posix(filename),
+        Utils.read(this.workdir, 'source', filename)
+      )
+    })
+    // load plugins
     const tasks = Utils.parse(this.workdir, 'package.json')
       .dependencies.filter((dep: string) => {
         dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
@@ -23,7 +32,7 @@ class Vivia {
       .map(async (dep: string) => {
         try {
           const name = dep.replace('vivia-', '')
-          const plugin = await Utils.import(this.workdir, 'node_modules', dep)
+          const plugin = await Utils.import(process.cwd(), 'node_modules', dep)
           this.plugins[name] = plugin
           console.info(chalk.blue(`Loaded plugin ${dep}`))
         } catch (e) {

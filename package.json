@@ -28,7 +28,7 @@
     "logo.png"
   ],
   "bin": {
-    "vivia": "dist/cli.js"
+    "vivia": "dist/cli/index.js"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
