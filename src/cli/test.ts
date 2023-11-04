@@ -5,4 +5,4 @@ import Vivia from '../vivia.js'
 // await vivia.load()
 // console.dir(vivia, { maxStringLength: 50, maxArrayLength: 10 })
 
-console.log(Utils.readdir('data'))
+console.log(Utils.readdirFully('data'))

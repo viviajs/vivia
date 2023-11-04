@@ -1,19 +1,20 @@
 import chalk from 'chalk'
-import Utils, { basenameWithoutExt } from './utils.js'
+import fs from 'fs'
+import { basenameWithoutExt, parse } from './utils.js'
 
 class Config {
   site: Record<string, any> = {}
   plugins: Record<string, Function> = {}
   theme: Record<string, Function> = {}
   pipeline: Record<string, any> = {}
-  // build: Record<string, any> = {
-  //   outdir: 'public'
-  // }
-  // serve: Record<string, any> = {
-  //   debug: true,
-  //   port: 3722
-  // }
-  // deploy: Record<string, any> = {}
+  build: Record<string, any> = {
+    outdir: 'public'
+  }
+  serve: Record<string, any> = {
+    debug: process.env.NODE_ENV !== 'production',
+    port: 3722
+  }
+  deploy: Record<string, any> = {}
 
   /**
    * Load config from a vivia project directory.
@@ -21,7 +22,7 @@ class Config {
    * @returns The config of the project.
    */
   static from (dirname: string) {
-    const filenames = Utils.dir(dirname)
+    const filenames = fs.readdirSync(dirname)
     if (!filenames.some(filename => basenameWithoutExt(filename) === 'vivia')) {
       throw new Error(`No vivia config file found in ${dirname}`)
     }
@@ -39,7 +40,7 @@ class Config {
       duplicated.push(basename)
 
       const key = basename as keyof Config | 'vivia'
-      const content = Utils.parse(dirname, filename)
+      const content = parse(dirname, filename)
       if (key === 'vivia') {
         Object.assign(config, content)
       } else {
