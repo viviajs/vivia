@@ -18,7 +18,7 @@ socket.onmessage = () => { location.reload() }
 const vivia = new Vivia()
 vivia.debug = true
 
-await vivia.load()
+await vivia.init()
 
 function hotreloadInject () {
   vivia.plugins['hotreload'] = (context: any) => {
@@ -69,7 +69,7 @@ fs.watch('.', { recursive: true }, async (event, pathname) => {
       break
     case 'vivia.yml':
       console.clear()
-      await vivia.load()
+      await vivia.init()
       hotreloadInject()
       await vivia.buildAll()
       console.info(chalk.yellow(`${pathname} changed, restarted`))

@@ -1,52 +1,88 @@
 import fs from 'fs'
-import { basenameWithoutExt, importModule, parse, posix } from './utils.js'
+import { basenameWithoutExt, parse } from './utils.js'
 import path from 'path'
-import Plugin from './plugin.js'
-import chalk from 'chalk'
+import Context from './context.js'
+import Config from './config.js'
+import Vivia from './vivia.js'
 
-export function loadSource (dirname: string) {
-  const source = new Map()
-  fs.readdirSync(dirname, { recursive: true }).forEach(filename => {
-    source.set(
-      posix(filename as string),
-      fs.readFileSync(path.join(dirname, filename as string), 'utf8')
-    )
-  })
-  return source
-}
-
-export function loadData (dirname: string) {
-  const data: any = {}
-  fs.readdirSync(dirname).forEach(filename => {
-    const stat = fs.statSync(path.join(dirname, filename))
-    if (stat.isFile()) {
-      const name = basenameWithoutExt(filename)
-      data[name] = parse(dirname, filename)
+class Loader {
+  /**
+   * Load the config file.
+   * @param dirname The working directory.
+   * @returns The config object.
+   */
+  static config (dirname: string) {
+    const filename = fs
+      .readdirSync(dirname)
+      .find(filename => basenameWithoutExt(filename) === 'vivia')
+    if (filename == null) {
+      throw new Error(`No vivia config file found in ${dirname}`)
     }
-    if (stat.isDirectory()) {
-      data[filename] = loadData(path.join(dirname, filename))
-    }
-  })
-  return data
-}
+    return Object.assign(new Config(), parse(dirname, filename))
+  }
 
-export async function loadPlugins (dirname: string) {
-  const plugins: Record<string, Plugin> = {}
-  const tasks = parse(dirname, 'package.json')
-    .dependencies.filter((dep: string) => {
-      dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
-    })
-    .map(async (dep: string) => {
-      try {
-        const name = dep.replace('vivia-', '')
-        const plugin = await importModule(process.cwd(), 'node_modules', dep)
-        plugins[name] = plugin
-        console.info(chalk.blue(`Loaded plugin ${dep}`))
-      } catch (e) {
-        console.error(chalk.red(`Failed to load plugin ${dep}`))
-        console.error(e)
+  /**
+   * Load all source files.
+   * @param dirname The working directory.
+   * @returns The source contexts.
+   */
+  static source (dirname: string) {
+    return fs
+      .readdirSync(dirname, { encoding: 'utf8', recursive: true })
+      .map(filename => {
+        return new Context(
+          path.join(filename).split(path.sep).join(path.posix.sep),
+          fs.readFileSync(path.join(dirname, filename), 'utf8')
+        )
+      })
+  }
+
+  /**
+   * Load all data files.
+   * @param dirname The working directory.
+   * @returns The data object.
+   */
+  static data (dirname: string) {
+    const data: any = {}
+    fs.readdirSync(dirname).forEach(filename => {
+      const stat = fs.statSync(path.join(dirname, filename))
+      if (stat.isFile()) {
+        const name = basenameWithoutExt(filename)
+        data[name] = parse(dirname, filename)
+      }
+      if (stat.isDirectory()) {
+        data[filename] = Loader.data(path.join(dirname, filename))
       }
     })
-  await Promise.all(tasks)
-  return plugins
+    return data
+  }
+
+  /**
+   * Load all plugin paths.
+   * @param dirname The working directory.
+   * @returns The plugin paths.
+   */
+  static async plugins (dirname: string, options: Record<string, any>) {
+    const plugins = {}
+    parse(dirname, 'package.json')
+      .dependencies.filter((dep: string) => {
+        return dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
+      })
+      .map((dep: string) => {
+        return path.join(process.cwd(), 'node_modules', dep)
+      }) as string[]
+  }
+
+  /**
+   * Load a theme.
+   * @param name The theme name.
+   * @returns The theme instance.
+   */
+  static theme (name: string) {
+    return new Vivia(
+      path.join(process.cwd(), 'node_modules', `vivia-theme-${name}`)
+    )
+  }
 }
+
+export default Loader
