@@ -1,3 +1,4 @@
+import { minimatch } from 'minimatch'
 import Config from './config.js'
 import Context from './context.js'
 import Loader from './loader.js'
@@ -23,7 +24,19 @@ class Vivia {
     }
   }
 
-  async render (source: string) {}
+  async load () {
+    await Loader.plugins(this)
+  }
+
+  async render (context: Context) {
+    const chain =
+      Object.entries(this.config.pipeline)
+        .find(([pattern]) => minimatch(context.path, pattern))?.[1]
+        .map((pipeline: string) => this.renderer[pipeline]) ?? []
+    for (const step of chain) {
+      await step(context)
+    }
+  }
 }
 
 export default Vivia

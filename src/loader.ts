@@ -62,15 +62,16 @@ class Loader {
    * @param dirname The working directory.
    * @returns The plugin paths.
    */
-  static async plugins (dirname: string, options: Record<string, any>) {
-    const plugins = {}
-    parse(dirname, 'package.json')
-      .dependencies.filter((dep: string) => {
-        return dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
-      })
-      .map((dep: string) => {
-        return path.join(process.cwd(), 'node_modules', dep)
-      }) as string[]
+  static async plugins (vivia: Vivia) {
+    const deps = parse(vivia.workdir, 'package.json').dependencies.filter(
+      (dep: string) =>
+        dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
+    )
+    for (const dep of deps) {
+      const name = dep.replace('vivia-', '')
+      const module = await import(path.join(process.cwd(), 'node_modules', dep))
+      await module.default(vivia.config.plugins[name], vivia)
+    }
   }
 
   /**
