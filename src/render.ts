@@ -4,3 +4,5 @@ import Vivia from './vivia.js'
 class Render {
   static single (context: Context, Vivia: Vivia) {}
 }
+
+export default Render

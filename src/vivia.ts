@@ -9,7 +9,7 @@ class Vivia {
   source: Context[]
   data: Record<string, any>
   global: Record<string, any> = {}
-  renderer: Record<string, Function[]> = {}
+  renderers: Record<string, Function> = {}
 
   constructor (workdir: string) {
     this.workdir = workdir

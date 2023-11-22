@@ -4,85 +4,80 @@ import path from 'path'
 import Context from './context.js'
 import Config from './config.js'
 import Vivia from './vivia.js'
+import Pipeline from './pipeline.js'
 
 class Loader {
-  /**
-   * Load the config file.
-   * @param dirname The working directory.
-   * @returns The config object.
-   */
-  static config (dirname: string) {
-    const filename = fs
-      .readdirSync(dirname)
-      .find(filename => basenameWithoutExt(filename) === 'vivia')
-    if (filename == null) {
-      throw new Error(`No vivia config file found in ${dirname}`)
-    }
-    return Object.assign(new Config(), parse(dirname, filename))
+  vivia: Vivia
+  workdir: string
+
+  constructor (vivia: Vivia) {
+    this.vivia = vivia
+    this.workdir = vivia.workdir
   }
 
-  /**
-   * Load all source files.
-   * @param dirname The working directory.
-   * @returns The source contexts.
-   */
-  static source (dirname: string) {
+  config () {
+    const filename = fs
+      .readdirSync(this.workdir)
+      .find(filename => basenameWithoutExt(filename) === 'vivia')
+    if (filename == null) {
+      throw new Error(`No vivia config file found in ${this.workdir}`)
+    }
+    return Object.assign(new Config(), parse(this.workdir, filename))
+  }
+
+  source () {
     return fs
-      .readdirSync(dirname, { encoding: 'utf8', recursive: true })
+      .readdirSync(this.workdir, { encoding: 'utf8', recursive: true })
       .map(filename => {
         return new Context(
           path.join(filename).split(path.sep).join(path.posix.sep),
-          fs.readFileSync(path.join(dirname, filename), 'utf8')
+          fs.readFileSync(path.join(this.workdir, filename), 'utf8')
         )
       })
   }
 
-  /**
-   * Load all data files.
-   * @param dirname The working directory.
-   * @returns The data object.
-   */
-  static data (dirname: string) {
+  data (dirname?: string) {
+    const workdir = dirname ?? this.workdir
     const data: any = {}
-    fs.readdirSync(dirname).forEach(filename => {
-      const stat = fs.statSync(path.join(dirname, filename))
+    fs.readdirSync(workdir).forEach(filename => {
+      const stat = fs.statSync(path.join(workdir, filename))
       if (stat.isFile()) {
         const name = basenameWithoutExt(filename)
-        data[name] = parse(dirname, filename)
+        data[name] = parse(workdir, filename)
       }
       if (stat.isDirectory()) {
-        data[filename] = Loader.data(path.join(dirname, filename))
+        data[filename] = this.data(path.join(workdir, filename))
       }
     })
     return data
   }
 
-  /**
-   * Load all plugin paths.
-   * @param dirname The working directory.
-   * @returns The plugin paths.
-   */
-  static async plugins (vivia: Vivia) {
-    const deps = parse(vivia.workdir, 'package.json').dependencies.filter(
+  theme (name: string) {
+    return new Vivia(
+      path.join(process.cwd(), 'node_modules', `vivia-theme-${name}`)
+    )
+  }
+
+  async plugins () {
+    const deps = parse(this.workdir, 'package.json').dependencies.filter(
       (dep: string) =>
         dep.startsWith('vivia-') && !dep.startsWith('vivia-theme-')
     )
     for (const dep of deps) {
       const name = dep.replace('vivia-', '')
       const module = await import(path.join(process.cwd(), 'node_modules', dep))
-      await module.default(vivia.config.plugins[name], vivia)
+      await module.default(this.vivia.config.plugins[name], this.vivia)
     }
   }
 
-  /**
-   * Load a theme.
-   * @param name The theme name.
-   * @returns The theme instance.
-   */
-  static theme (name: string) {
-    return new Vivia(
-      path.join(process.cwd(), 'node_modules', `vivia-theme-${name}`)
-    )
+  pipeline () {
+    const pipelines = []
+    this.vivia.config.pipelines.map((pipeline: any) => {
+      const renderers = pipeline.renderers.map((renderer: string) => {
+        return this.vivia.renderers[renderer]
+      })
+      return new Pipeline(pipeline.router, renderers, pipeline)
+    })
   }
 }
 

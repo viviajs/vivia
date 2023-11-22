@@ -1,10 +1,10 @@
 class Config {
-  site: Record<string, any> = {}
+  globals: Record<string, any> = {}
   plugins: Record<string, any> = {}
-  pipeline: Record<string, any> = {}
-  theme?: string
+  pipelines: Record<string, any> = {}
+  theme = ''
   outdir = 'public'
-  debug = process.env.NODE_ENV !== 'production'
+  debug = process.env.NODE_ENV === 'development'
   port = 3722
 }
 

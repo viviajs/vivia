@@ -1,23 +1,22 @@
-import fs from 'fs'
 import Context from './context.js'
-import path from 'path'
 
 class Pipeline {
-  pattern: string
-  chain: Function[]
+  router: string
+  renderers: Function[]
+  globals: any
 
-  constructor (pattern: string, chain: Function[]) {
-    this.pattern = pattern
-    this.chain = chain
+  constructor (router: string, renderers: Function[], globals: any) {
+    this.router = router
+    this.renderers = renderers
+    this.globals = globals
   }
 
-  async run (context: Context) {
-    for (const step of this.chain) {
-      await step(context)
+  async render (context: Context) {
+    Object.assign(context, this.globals)
+    for (const renderer of this.renderers) {
+      await renderer(context)
     }
-    const folder = path.dirname(context.path)
-    if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true })
-    fs.writeFileSync(context.path, context.content)
+    return context
   }
 }
 
