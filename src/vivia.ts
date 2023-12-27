@@ -2,29 +2,36 @@ import { minimatch } from 'minimatch'
 import Config from './config.js'
 import Context from './context.js'
 import Loader from './loader.js'
+import Utils from './utils.js'
 
 class Vivia {
-  workdir: string
-  config: Config
-  source: Context[]
-  data: Record<string, any>
-  global: Record<string, any> = {}
-  renderers: Record<string, Function> = {}
+  constructor (
+    public workdir: string,
+    public config: Config,
+    public globals: Record<string, any>,
+    public renderers: Record<string, Function>
+  ) {}
 
-  constructor (workdir: string) {
-    this.workdir = workdir
-    this.config = Loader.config(workdir)
-    this.source = Loader.source(workdir)
-    this.data = Loader.data(workdir)
-    if (this.config.theme != null) {
-      const theme = Loader.theme(this.config.theme)
-      this.config = Object.assign(theme.config, this.config)
-      this.source = theme.source.concat(this.source)
-      this.data = Object.assign(theme.data, this.data)
+  static async load (workdir?: string) {
+    workdir = workdir ?? process.cwd()
+    const config = Utils.loadConfig(workdir)
+const vivia = new Vivia()
+    if (config.theme) {
+
     }
-  }
+    const vivia = new Vivia()
+    this.loader = new Loader(this)
+    const workdir = workdir ?? process.cwd()
+    this.config = this.loader.config()
 
-  async load () {
+    if (this.config.theme != null) {
+      const theme = this.loader.theme(this.config.theme)
+      this.config = Object.assign(theme.config, this.config)
+      this.globals.source = Object.assign(
+        theme.globals.source,
+        this.globals.source
+      )
+    }
     await Loader.plugins(this)
   }
 

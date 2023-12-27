@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { basenameWithoutExt, parse } from './utils.js'
+import Utils from './utils.js'
 import path from 'path'
 import Context from './context.js'
 import Config from './config.js'
@@ -15,14 +15,8 @@ class Loader {
     this.workdir = vivia.workdir
   }
 
-  config () {
-    const filename = fs
-      .readdirSync(this.workdir)
-      .find(filename => basenameWithoutExt(filename) === 'vivia')
-    if (filename == null) {
-      throw new Error(`No vivia config file found in ${this.workdir}`)
-    }
-    return Object.assign(new Config(), parse(this.workdir, filename))
+  static config () {
+
   }
 
   source () {
@@ -34,22 +28,6 @@ class Loader {
           fs.readFileSync(path.join(this.workdir, filename), 'utf8')
         )
       })
-  }
-
-  data (dirname?: string) {
-    const workdir = dirname ?? this.workdir
-    const data: any = {}
-    fs.readdirSync(workdir).forEach(filename => {
-      const stat = fs.statSync(path.join(workdir, filename))
-      if (stat.isFile()) {
-        const name = basenameWithoutExt(filename)
-        data[name] = parse(workdir, filename)
-      }
-      if (stat.isDirectory()) {
-        data[filename] = this.data(path.join(workdir, filename))
-      }
-    })
-    return data
   }
 
   theme (name: string) {
