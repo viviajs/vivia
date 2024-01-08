@@ -25,32 +25,6 @@ class Utils {
         throw new Error(`Unsupported file format: ${filename}`)
     }
   }
-
-  static deepAssign (target: any, source: any) {
-    for (const key in source) {
-      if (!source.hasOwnProperty(key)) continue
-      if (
-        source[key] instanceof Object &&
-        !(source[key] instanceof Array) &&
-        target[key] != null &&
-        target[key] instanceof Object
-      ) {
-        this.deepAssign(target[key], source[key])
-      } else {
-        target[key] = source[key]
-      }
-    }
-  }
-
-  static loadConfig (dir: string) {
-    const filename = fs
-      .readdirSync(dir)
-      .find(file => path.basename(file, path.extname(file)) === 'vivia')
-    if (filename == null) {
-      throw new Error(`No vivia config file found in ${dir}`)
-    }
-    return Object.assign(new Config(), this.parse(dir, filename))
-  }
 }
 
 export default Utils
