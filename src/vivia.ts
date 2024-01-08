@@ -2,18 +2,14 @@ import fs from 'fs'
 import path from 'path'
 
 import Config from './config.js'
-import Utils from './utils.js'
-import { minimatch } from 'minimatch'
 import { globSync } from 'glob'
+import yaml from 'yaml'
 
 function loadConfig (dir: string) {
-  const filename = fs
-    .readdirSync(dir)
-    .find(file => path.basename(file, path.extname(file)) === 'vivia')
-  if (filename == null) {
-    throw new Error(`No vivia config file found in ${dir}`)
-  }
-  return Object.assign(new Config(), Utils.parse(dir, filename))
+  const config = yaml.parse(
+    fs.readFileSync(path.join(dir, 'vivia.yml'), 'utf8')
+  )
+  return Object.assign(new Config(), config)
 }
 
 function loadTheme (name: string) {
@@ -23,9 +19,10 @@ function loadTheme (name: string) {
 }
 
 function loadPlugins (dir: string) {
-  return Object.keys(Utils.parse(dir, 'package.json').dependencies).filter(
-    (dep: string) => dep.startsWith('vivia-')
-  )
+  return Object.keys(
+    JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+      .dependencies
+  ).filter((dep: string) => dep.startsWith('vivia-'))
 }
 
 class Vivia {
@@ -50,7 +47,9 @@ class Vivia {
       const pluginPath = path.join(process.cwd(), 'node_modules', plugin)
       const mainPath = path.join(
         pluginPath,
-        Utils.parse(pluginPath, 'package.json').main ?? 'index.js'
+        JSON.parse(
+          fs.readFileSync(path.join(pluginPath, 'package.json'), 'utf8')
+        ).main ?? 'index.js'
       )
       const pluginModule = await import(mainPath)
       const pluginOptions = this.config.plugins?.[plugin]
@@ -63,12 +62,17 @@ class Vivia {
     this.config.pipelines.sort(
       (a, b) => (a.priority ?? -1) - (b.priority ?? -1)
     )
-    console.log(this.config.pipelines)
-    console.log(process.cwd())
-    console.log(path.resolve('./source'))
 
     for (const pipeline of this.config.pipelines) {
-      console.log(globSync(pipeline.source, { cwd: 'source' }))
+      const source = globSync(pipeline.source, { cwd: 'source' }).map(file => {
+        return {
+          path: file,
+          content: fs.readFileSync(path.join('source', file), 'utf8')
+        }
+      })
+      for (const renderer of pipeline.renderers) {
+        this.renderers[renderer](source)
+      }
     }
   }
 }
