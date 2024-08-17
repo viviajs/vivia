@@ -4,6 +4,7 @@
   },
   "extends": [
     "plugin:@typescript-eslint/recommended",
+    "plugin:promise/recommended",
     "plugin:prettier/recommended"
   ],
   "parser": "@typescript-eslint/parser",
@@ -14,6 +15,7 @@
     "project": "./tsconfig.json"
   },
   "plugins": [
+    "promise",
     "prettier"
   ],
   "rules": {
